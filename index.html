@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visual Novel AI</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen">
+
+  <div id="setupScreen" class="flex items-center justify-center min-h-screen p-4">
+    <div class="w-full max-w-xl bg-slate-800 rounded-2xl shadow-2xl border border-slate-700 overflow-hidden">
+      <div class="bg-indigo-600 p-6 text-center">
+        <h1 class="text-3xl font-bold text-white flex items-center justify-center gap-2">
+          <i data-lucide="settings" class="w-8 h-8"></i> Konfigurasi Visual Novel
+        </h1>
+        <p class="text-indigo-200 mt-2 text-sm">Rancang karakter dan adegan sesukamu</p>
+      </div>
+      
+      <div class="p-6 space-y-5">
+        <div id="errorMsg" class="hidden p-3 bg-red-500/20 border border-red-500/50 rounded-lg text-red-200 flex items-center gap-2 text-sm">
+          <i data-lucide="alert-circle" class="w-4 h-4 flex-shrink-0"></i>
+          <span id="errorText"></span>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-300 mb-1">Nama Karakter AI</label>
+          <input type="text" id="inputName" value="Anya" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-slate-300 mb-1">Sifat & Persona Karakter</label>
+          <textarea id="inputPersona" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none transition-all h-24 resize-none">Tsundere, teman sekelas yang sering ketus tapi sebenarnya sangat peduli.</textarea>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-slate-300 mb-1">Latar Belakang / Adegan Saat Ini</label>
+          <textarea id="inputScene" class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-indigo-500 outline-none transition-all h-24 resize-none">Di ruang kelas yang kosong saat sepulang sekolah, hujan turun rintik-rintik.</textarea>
+        </div>
+
+        <button onclick="startGame()" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors">
+          <i data-lucide="play" class="w-5 h-5"></i> Mulai Petualangan
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="gameScreen" class="hidden flex-col items-center justify-center min-h-screen p-4 bg-black relative">
+    <div class="w-full max-w-5xl h-[85vh] relative rounded-xl overflow-hidden shadow-2xl ring-1 ring-white/10 flex flex-col bg-gradient-to-br from-slate-800 via-slate-900 to-indigo-950">
+      
+      <div class="absolute top-0 left-0 w-full p-4 z-20 flex justify-between items-start pointer-events-none">
+        <div class="bg-black/50 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 pointer-events-auto">
+           <p class="text-white/80 text-sm font-medium"><span class="text-indigo-400 font-bold mr-2">Lokasi:</span> <span id="displayScene"></span></p>
+        </div>
+        <button onclick="restartGame()" class="bg-black/50 hover:bg-red-500/80 p-2 rounded-full border border-white/10 pointer-events-auto transition-colors">
+          <i data-lucide="rotate-ccw" class="w-5 h-5 text-white"></i>
+        </button>
+      </div>
+
+      <div class="flex-1 w-full relative z-10 flex items-end justify-center pb-8">
+        <div id="characterGlow" class="hidden w-64 h-80 bg-gradient-to-t from-indigo-500/20 to-transparent rounded-t-full blur-xl animate-pulse"></div>
+      </div>
+
+      <div class="relative z-20 w-full px-4 pb-6">
+        <div class="w-full bg-slate-900/85 backdrop-blur-md border border-slate-700 rounded-xl p-6 mb-4 relative min-h-[160px] flex flex-col">
+          <div id="speakerName" class="absolute -top-4 left-6 px-4 py-1.5 rounded-md shadow-lg font-bold tracking-wide text-base border bg-indigo-600 border-indigo-400 text-white">Sistem</div>
+          <div class="mt-4 flex-1 overflow-y-auto">
+            <p id="dialogueText" class="text-lg leading-relaxed text-slate-100 whitespace-pre-wrap">*Menyiapkan adegan...*</p>
+          </div>
+        </div>
+
+        <form onsubmit="sendMessage(event)" class="relative flex items-center gap-2">
+          <div class="relative flex-1">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center">
+              <i data-lucide="message-square" class="h-5 w-5 text-slate-400"></i>
+            </div>
+            <input type="text" id="userInput" placeholder="Tulis balasan atau aksi..." class="w-full bg-slate-800/90 border border-slate-600 text-white rounded-lg pl-10 pr-4 py-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+          </div>
+          <button type="submit" id="sendBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white p-4 rounded-lg flex items-center justify-center transition-colors disabled:opacity-50">
+            <i data-lucide="send" class="w-6 h-6"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Inisialisasi ikon Lucide
+    lucide.createIcons();
+
+    // VARIABEL SISTEM (Masukkan API Key kamu di sini)
+    const apiKey = "AIzaSyBfFtUfcUHYOESNP8fE-8C1fH1zaiOM34A"; 
+    
+    // Variabel State
+    let config = { name: '', persona: '', scene: '' };
+    let chatHistory = [];
+    let isTyping = false;
+    let typingInterval;
+
+    // Elemen DOM
+    const setupScreen = document.getElementById('setupScreen');
+    const gameScreen = document.getElementById('gameScreen');
+    const speakerName = document.getElementById('speakerName');
+    const dialogueText = document.getElementById('dialogueText');
+    const characterGlow = document.getElementById('characterGlow');
+    const userInput = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const errorMsg = document.getElementById('errorMsg');
+    const errorText = document.getElementById('errorText');
+
+    // Fungsi utilitas
+    function showError(msg) {
+      errorText.innerText = msg;
+      errorMsg.classList.remove('hidden');
+    }
+    const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+    // ================= FUNGSI UTAMA: MENGAMBIL RESPON AI =================
+    async function fetchGeminiResponse(userText) {
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+      const systemInstruction = `Kamu adalah karakter game Visual Novel. Nama: ${config.name}. Sifat: ${config.persona}. Situasi saat ini: ${config.scene}. Balas maksimal 3 kalimat dalam bahasa Indonesia, jangan keluar dari karakter, sertakan aksi/ekspresi di antara tanda bintang (*tersenyum*).`;
+
+      // Menyiapkan Riwayat Percakapan
+      const contents = chatHistory.map(msg => ({
+        role: msg.role === 'ai' ? 'model' : 'user',
+        parts: [{ text: msg.text }]
+      }));
+      contents.push({ role: 'user', parts: [{ text: userText }] });
+
+      // Menyiapkan Payload dengan SETTING KEAMANAN YANG DILONGGARKAN
+      const payload = {
+        contents: contents,
+        systemInstruction: { parts: [{ text: systemInstruction }] },
+        safetySettings: [
+          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_ONLY_HIGH" },
+          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_ONLY_HIGH" }
+        ]
+      };
+
+      try {
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        
+        if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
+        const data = await response.json();
+
+        // PENGECEKAN JIKA DIBLOKIR OLEH SISTEM
+        if (data.promptFeedback && data.promptFeedback.blockReason) {
+           return "*Sistem menolak aksi pemain karena melewati batas filter keamanan Google.*";
+        }
+
+        if (data.candidates && data.candidates[0]) {
+           const candidate = data.candidates[0];
+           if (candidate.finishReason === 'SAFETY') {
+               return "*Karakter terdiam. (Aksi/dialog ini diblokir karena terlalu ekstrem).*";
+           }
+           if (candidate.content && candidate.content.parts) {
+               return candidate.content.parts[0].text;
+           }
+        }
+
+        throw new Error("Format respons tidak valid dari API.");
+      } catch (error) {
+        console.error("API Error:", error);
+        return "Gagal terhubung ke sistem kecerdasan buatan. Coba lagi.";
+      }
+    }
+
+    // ================= ALUR PERMAINAN =================
+    async function startGame() {
+      config.name = document.getElementById('inputName').value.trim();
+      config.persona = document.getElementById('inputPersona').value.trim();
+      config.scene = document.getElementById('inputScene').value.trim();
+
+      if (!config.name || !config.persona || !config.scene) {
+        showError("Semua kolom setup harus diisi!");
+        return;
+      }
+
+      setupScreen.classList.add('hidden');
+      gameScreen.classList.remove('hidden');
+      gameScreen.classList.add('flex');
+      document.getElementById('displayScene').innerText = config.scene;
+
+      chatHistory = [];
+      updateUI('Sistem', '*Menyiapkan adegan...*', false);
+      setTypingState(true);
+
+      const initialTrigger = "*(Pemain mendekat dan adegan dimulai. Berikan sapaan atau reaksi pertamamu sesuai latar).*";
+      
+      const response = await fetchGeminiResponse(initialTrigger);
+      chatHistory.push({ role: 'user', text: initialTrigger });
+      chatHistory.push({ role: 'ai', text: response });
+      
+      setTypingState(false);
+      updateUI(config.name, response, true);
+    }
+
+    async function sendMessage(e) {
+      e.preventDefault();
+      const text = userInput.value.trim();
+      if (!text || isTyping) return;
+
+      userInput.value = '';
+      updateUI('Kamu', text, false);
+      chatHistory.push({ role: 'user', text: text });
+      
+      setTypingState(true);
+      await delay(800);
+      updateUI(config.name, '*Sedang memikirkan balasan...*', true);
+
+      const response = await fetchGeminiResponse(text);
+      chatHistory.push({ role: 'ai', text: response });
+      
+      setTypingState(false);
+      updateUI(config.name, response, true);
+      userInput.focus();
+    }
+
+    // ================= EFEK VISUAL =================
+    function formatActionText(text) {
+      return text.replace(/\*(.*?)\*/g, '<span class="italic text-indigo-300">*$1*</span>');
+    }
+
+    function playTypewriter(text, element) {
+      clearInterval(typingInterval); 
+      element.innerHTML = ''; 
+      let i = 0;
+      
+      typingInterval = setInterval(() => {
+        element.innerHTML += text.charAt(i);
+        i++;
+        if (i >= text.length) {
+          clearInterval(typingInterval);
+          element.innerHTML = formatActionText(text); 
+        }
+      }, 35); 
+    }
+
+    function updateUI(speaker, text, isAiSpeaker) {
+      speakerName.innerText = speaker;
+
+      speakerName.className = `absolute -top-4 left-6 px-4 py-1.5 rounded-md shadow-lg font-bold tracking-wide text-base border ${
+        speaker === 'Kamu' ? 'bg-emerald-600 border-emerald-400 text-white' : 
+        speaker === 'Sistem' ? 'bg-slate-700 border-slate-500 text-slate-200' : 
+        'bg-indigo-600 border-indigo-400 text-white'
+      }`;
+
+      if (isAiSpeaker) {
+        characterGlow.classList.remove('hidden');
+      } else {
+        characterGlow.classList.add('hidden');
+      }
+
+      if (isAiSpeaker && text !== '*Sedang memikirkan balasan...*') {
+        playTypewriter(text, dialogueText);
+      } else {
+        clearInterval(typingInterval);
+        dialogueText.innerHTML = formatActionText(text);
+      }
+    }
+
+    function setTypingState(state) {
+      isTyping = state;
+      userInput.disabled = state;
+      sendBtn.disabled = state;
+      if (state) userInput.placeholder = "Menunggu respons...";
+      else userInput.placeholder = "Tulis balasan atau aksi...";
+    }
+
+    function restartGame() {
+      gameScreen.classList.add('hidden');
+      gameScreen.classList.remove('flex');
+      setupScreen.classList.remove('hidden');
+      chatHistory = [];
+      errorMsg.classList.add('hidden');
+      clearInterval(typingInterval); 
+    }
+  </script>
+</body>
+</html>
