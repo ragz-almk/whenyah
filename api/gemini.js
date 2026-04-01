@@ -1,4 +1,6 @@
 // api/gemini.js
+import { GoogleGenAI } from '@google/genai';
+
 export default async function handler(req, res) {
     // Hanya menerima method POST
     if (req.method !== 'POST') {
@@ -11,26 +13,40 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'API Key tidak ditemukan di server.' });
     }
 
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+    // Inisialisasi Google Gen AI SDK (seperti di dokumentasimu!)
+    const ai = new GoogleGenAI({ apiKey: apiKey });
 
     try {
-        // Meneruskan request dari frontend ke Gemini API
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(req.body)
+        // Mengambil data yang dikirim dari frontend (script.js)
+        const { contents, systemInstruction, generationConfig } = req.body;
+
+        // Memanggil Gemini API menggunakan SDK baru
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: contents,
+            config: {
+                // Menyesuaikan format system instruction & mimeType untuk SDK baru
+                systemInstruction: systemInstruction?.parts?.[0]?.text || systemInstruction,
+                responseMimeType: generationConfig?.responseMimeType || "application/json",
+            }
         });
 
-        const data = await response.json();
+        // Supaya frontend (script.js) kita tidak error karena perubahan struktur balasan,
+        // kita bungkus response dari SDK agar bentuknya sama seperti REST API sebelumnya.
+        res.status(200).json({
+            candidates: [
+                {
+                    content: {
+                        parts: [
+                            { text: response.text }
+                        ]
+                    }
+                }
+            ]
+        });
 
-        if (!response.ok) {
-            throw new Error(data.error?.message || 'Gagal mengambil data dari Gemini');
-        }
-
-        // Mengembalikan respons ke frontend
-        res.status(200).json(data);
     } catch (error) {
-        console.error("API Error:", error);
+        console.error("API Error dari SDK:", error);
         res.status(500).json({ error: error.message });
     }
 }
