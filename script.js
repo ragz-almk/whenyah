@@ -81,8 +81,7 @@ viewHistoryBtn.addEventListener('click', async () => {
             <p class="text-xs text-slate-400 mb-2">${dateString}</p>
             <p class="text-sm text-slate-300 line-clamp-2">${story.premise}</p>
         `;
-        // Saat diklik, bisa di-load ceritanya (Sederhana: kita tampilkan alert untuk sekarang, atau kembangkan untuk me-load chatHistory ke layar game)
-        div.onclick = () => alert("Fitur memuat cerita lama bisa dikembangkan dengan menaruh array history ke game screen!");
+        div.onclick = () => loadStory(story);
         historyList.appendChild(div);
     });
 });
@@ -273,4 +272,79 @@ function scrollToBottom() {
             behavior: 'smooth'
         });
     }, 100);
+}
+
+// Fungsi untuk memuat ulang cerita dari database ke layar
+function loadStory(storyData) {
+    // 1. Mengembalikan data state utama dari database ke variabel lokal
+    mcName = storyData.mcName;
+    premise = storyData.premise;
+    chatHistory = storyData.chatHistory || [];
+
+    // 2. Membersihkan layar permainan dari cerita sebelumnya
+    storyContainer.innerHTML = '';
+    aiChoicesContainer.innerHTML = '';
+
+    // 3. Berpindah dari layar riwayat (History) ke layar permainan (Game)
+    historyScreen.classList.add('hidden');
+    historyScreen.classList.remove('flex');
+    gameScreen.classList.remove('hidden');
+    gameScreen.classList.add('flex');
+
+    // 4. Membaca ulang isi chatHistory dan mencetaknya ke layar
+    let lastChoices = []; // Untuk menyimpan pilihan paling terakhir dari AI
+
+    chatHistory.forEach(item => {
+        if (item.role === 'user') {
+            // Mengekstrak tulisan pilihan user dari struktur prompt kita sebelumnya
+            // Format prompt kita: "Pemain memilih: [PILIHAN]. Lanjutkan cerita..."
+            const text = item.parts[0].text;
+            if (text.startsWith("Pemain memilih: ")) {
+                const choiceMatch = text.match(/Pemain memilih: (.*?)\. Lanjutkan/);
+                if (choiceMatch && choiceMatch[1]) {
+                    addNarrationToUI(`Kamu memutuskan: "${choiceMatch[1]}"`, true);
+                }
+            }
+        } else if (item.role === 'model') {
+            // Mem-parsing teks mentah menjadi JSON kembali
+            try {
+                const responseJson = JSON.parse(item.parts[0].text);
+                const nodes = responseJson.story_nodes || [];
+                
+                // Menampilkan ulang narasi dan dialog persis seperti saat bermain
+                nodes.forEach(node => {
+                    if (node.type === 'narration') {
+                        addNarrationToUI(node.text);
+                    } else if (node.type === 'dialog') {
+                        addDialogToUI(node.character_name, node.dialog_text, node.action_text, node.emoji);
+                    }
+                });
+
+                // Terus perbarui 'lastChoices' sehingga kita mendapat pilihan paling akhir
+                if (responseJson.choices) {
+                    lastChoices = responseJson.choices;
+                }
+            } catch (e) {
+                console.error("Gagal memuat sebagian riwayat JSON:", e);
+            }
+        }
+    });
+
+    // 5. Menampilkan kembali tombol pilihan terakhir agar permainan bisa dilanjutkan
+    lastChoices.forEach(choiceText => {
+        const btn = document.createElement('button');
+        btn.className = "bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 text-left px-4 py-3 rounded-lg text-sm transition-colors";
+        btn.innerText = choiceText;
+        btn.onclick = () => submitChoice(choiceText);
+        aiChoicesContainer.appendChild(btn);
+    });
+
+    // 6. Tampilkan panel kontrol dan sembunyikan loading
+    controlsContainer.classList.remove('hidden');
+    loadingIndicator.classList.add('hidden');
+    loadingIndicator.classList.remove('flex');
+    isGenerating = false;
+    
+    // Gulir ke bawah secara otomatis
+    scrollToBottom();
 }
