@@ -1,8 +1,0 @@
-{
-  "name": "ai-visual-novel",
-  "version": "1.0.0",
-  "type": "module",
-  "dependencies": {
-    "@google/genai": "latest"
-  }
-}
