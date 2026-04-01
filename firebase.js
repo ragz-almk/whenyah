@@ -21,7 +21,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app); // Mengaktifkan Analytics
 const auth = getAuth(app);
-const db = getFirestore(app); // Kita menggunakan Firestore untuk menyimpan history
+const db = getFirestore(app, "whenyah"); // Kita menggunakan Firestore untuk menyimpan history
 const provider = new GoogleAuthProvider();
 
 // --- FUNGSI AUTENTIKASI ---
