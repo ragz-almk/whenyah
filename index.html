@@ -148,5 +148,18 @@
     </div>
 
     <script type="module" src="script.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker berhasil didaftarkan dengan scope: ', registration.scope);
+                    })
+                    .catch(err => {
+                        console.log('Pendaftaran ServiceWorker gagal: ', err);
+                    });
+            });
+        }
+    </script>
 </body>
 </html>
